@@ -1,0 +1,15 @@
+streamlit
+streamlit_folium
+folium
+geopandas
+pandas
+numpy
+matplotlib
+torch
+joblib
+scikit-learn
+geemap
+openmeteo-requests
+requests-cache 
+retry-requests
+nbformat
