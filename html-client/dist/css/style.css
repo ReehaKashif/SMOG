@@ -1,0 +1,301 @@
+* {
+  --c1: #01cc01;
+  --c2: #ffc000;
+  --c3: #ff6501;
+  --c4: #fe0000;
+  --c5: #9a35ff;
+  --c6: #930537;
+}
+
+.pallete-container {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ranking-map-pallete-container {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.25rem;
+}
+
+.pallete-item,
+.ranking-map-pallete-item {
+  width: 100%;
+  height: 8px;
+}
+
+.ranking-map-pallete-row {
+  width: 100%;
+  height: 20px;
+  border-bottom: 1px solid;
+}
+.ranking-map-pallete-row:last-child {
+  border-bottom: 0;
+}
+.ranking-map-pallete-label {
+  width: 100%;
+  height: 12px;
+  font-weight: 500;
+  font-size: smaller;
+}
+/* Legend 1 */
+.district-aqi-map-legend,
+.district-rankings-map-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  z-index: 1000;
+  border: 1px solid;
+}
+.district-rankings-map-legend {
+  width: 160px;
+  height: 120px;
+  background-color: #fff;
+  /* background: rgba(250, 250, 250, 0.25); */
+  /* backdrop-filter: blur(2px); */
+}
+.district-aqi-map-legend-item {
+  width: 100%;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.district-aqi-map-legend-item.double-height {
+  height: 28px;
+}
+.district-aqi-map-legend-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 0px 8px;
+}
+.district-aqi-map-legend-item div span {
+  font-size: smaller;
+}
+
+.legend-colour-code,
+.legend-source-option {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+div.legend-arrow {
+  width: 0px !important;
+  height: 14px;
+  background-color: transparent;
+  border-left: 2px solid;
+}
+div.legend-arrow.double-height {
+  height: 28px;
+}
+/* div.legend-arrow-head {
+  border: 4px solid;
+  border-top: none ;
+  border-right: none ;
+  transform-origin: 0% 100%;
+  transform: translateX(2px) rotate(-45deg);
+} */
+div.legend-arrow-head {
+  position: relative;
+}
+div.legend-arrow-head::before {
+  content: "";
+  width: 0;
+  height: 0;
+  padding: 4px;
+  border: 2px solid;
+  border-top: none;
+  border-right: none;
+  transform-origin: 0% 100%;
+  transform: rotate(-45deg) translateX(-12px) translateY(-1px);
+}
+
+p.legend {
+  width: 100%;
+  margin-bottom: 2px;
+  text-align: start;
+  font-weight: bold;
+  font-size: large;
+}
+
+.color-legend-on-map {
+  width: 200px;
+  height: 120px;
+  max-height: 240px;
+  overflow-y: auto;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  border: 2px solid;
+  z-index: 1000;
+  background-color: #fff;
+  /* background: rgba(249, 249, 249, 0.25);
+  backdrop-filter: blur(4px); */
+}
+
+@media screen and (min-width: 768px) {
+  .pallete-container {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  .pallete-item {
+    height: 24px;
+  }
+}
+
+/* SPEEDOMETER */
+.speedometer {
+  position: relative;
+  margin: 0 auto;
+  width: 400px;
+  height: 400px;
+  padding: 100px;
+  border-radius: 50%;
+  background: radial-gradient(#ffffff 0 0) content-box,
+    conic-gradient(
+      from -90deg,
+      var(--c1) 30deg,
+      var(--c2) 0 60deg,
+      var(--c3) 0 90deg,
+      var(--c4) 0 120deg,
+      var(--c5) 0 150deg,
+      var(--c6) 0 180deg,
+      #ffffff 0
+    );
+}
+
+/* Style for the numbers around the speedometer */
+.numbers span,
+.labels span {
+  position: absolute;
+  z-index: 1000;
+  color: #1f1f1f;
+  font-size: 1em !important;
+}
+
+.labels span {
+  border: 2px solid red;
+  width: 75px;
+  height: 75px;
+  font-size: 18px !important;
+}
+
+/* .numbers span:nth-child(4) {
+  top: -30px;
+  left: 50%;
+  transform: translate(-50%, 0);
+} */
+
+/* .labels span {
+  font-size: 1.25rem;
+  color: #000000;
+  transform: translate(-50%, -150px);
+} */
+/* transform: translate(-50%, -100%) rotate(calc(var(--rotation) * -1deg)); */
+/* .numbers span {
+  font-size: 1.2rem;
+  transform: translate(-50%, -240px) rotateZ(45deg);
+  font-size: 2.25rem !important;
+}
+
+.labels span {
+  font-size: 1.25rem;
+  color: #000000;
+  transform: translate(-50%, -150px);
+} */
+
+.needle {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  padding: 120px;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(
+        from 175deg at 50% 55%,
+        #ccc 2deg,
+        #1f1f1f 3deg 7deg,
+        #ccc 8deg 10deg,
+        #00000000 0
+      )
+      0 -170px no-repeat,
+    radial-gradient(#1f1f1f 0 50%, #ccc 51%) content-box;
+  transition: transform 0.5s ease-in-out;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.speedometer-1 {
+  position: relative;
+  margin: 0 auto;
+  width: 400px;
+  height: 400px;
+  padding: 100px;
+  border-radius: 50%;
+  background: radial-gradient(#ffffff 0 0) content-box,
+    conic-gradient(
+      from -90deg,
+      var(--c1) 30deg,
+      var(--c2) 0 60deg,
+      var(--c3) 0 90deg,
+      var(--c4) 0 120deg,
+      var(--c5) 0 150deg,
+      var(--c6) 0 180deg,
+      #ffffff 0
+    );
+
+  .needle {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    padding: 120px;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    border-radius: 50%;
+    background: conic-gradient(
+          from 175deg at 50% 55%,
+          #ccc 2deg,
+          #1f1f1f 3deg 7deg,
+          #ccc 8deg 10deg,
+          #00000000 0
+        )
+        0 -170px no-repeat,
+      radial-gradient(#1f1f1f 0 50%, #ccc 51%) content-box;
+    /* rotate: calc((var(--score) / 500) * 180deg); */
+    rotate: calc(cos(var(--score) * 180deg / 500) * -90deg);
+    /* rotate: calc(cos(var(--score) * 180deg / 500) * -90deg); */
+    transition: rotate 0.75s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+/*  */
+#header-district-selector > option {
+  width: 100%;
+  background-color: black;
+  color: white;
+}
