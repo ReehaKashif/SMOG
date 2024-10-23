@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>AQI Punjab Dashboard</title>
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport" />
+  <!-- Bootstrap 3.3.7 -->
+  <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.min.css" />
+  <link rel="stylesheet" href="dist/css/AdminLTE.css" />
+  <link rel="stylesheet" href="dist/css/skins/_all-skins.css" />
+  <link rel="stylesheet" href="bower_components/jvectormap/jquery-jvectormap.css" />
+  <link rel="stylesheet" href="bower_components/bootstrap-datepicker/dist/css/bootstrap-datepicker.min.css" />
+  <link rel="stylesheet" href="bower_components/bootstrap-daterangepicker/daterangepicker.css" />
+  <link rel="stylesheet" href="plugins/bootstrap-wysihtml5/bootstrap3-wysihtml5.min.css" />
+  <link rel="stylesheet" href="./dist/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- leaflet.shapefile for Shapefile support -->
+  <script src="https://unpkg.com/leaflet.shapefile/leaflet.shpfile.min.js"></script>
+</head>
+<body class="hold-transition skin-blue sidebar-mini">
+  <div class="wrapper">
+    <header class="main-header">
+      <nav class="navbar navbar-static-top">
+        <a href="#" class="logo">
+          <span class="logo-mini"><b>A</b>LT</span>
+          <img src="dist/img/logo.png" class="logo-image w-[100px] h-[80px] rounded-full" />
+          <p class="uppercase">
+            Punjab Information
+            <br />
+            Technology Board
+            <br />
+            <span>GOVERNMENT OF THE PUNJAB</span>
+          </p>
+        </a>
+      </nav>
+    </header>
+
+    <div class="content-wrapper">
+      <!-- Date Picker for selecting the date -->
+      <div class="container mt-5">
+        <div class="form-group text-center">
+          <label for="date-picker" class="h4">Select Date:</label>
+          <input type="date" id="date-picker" class="form-control w-25 mx-auto" />
+        </div>
+      </div>
+
+      <!-- Main content - Map -->
+      <div class="container mt-4">
+        <div id="forecastMap" style="height: 750px;"></div>
+      </div>
+    </div>
+
+    <!-- jQuery 3 -->
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/jquery-ui/jquery-ui.min.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+
+    <script>
+      // Global variable for the map
+      let districtMap;
+
+      $(document).ready(function () {
+        // Initialize the map with district boundaries
+        initializeMapWithDistricts();
+
+        // Event listener for date picker change
+        $('#date-picker').on('change', function () {
+          const selectedDate = $(this).val();
+          if (selectedDate) {
+            updateDistrictData(selectedDate);
+          }
+        });
+      });
+
+      // Function to initialize the map and load district boundaries
+      function initializeMapWithDistricts() {
+        districtMap = L.map("forecastMap").setView([30.5, 72.5], 7);
+
+        // Add base tile layer
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 18,
+          attribution: "Map data © OpenStreetMap contributors"
+        }).addTo(districtMap);
+
+        // Load district boundaries from Shapefiles and set initial white color
+        loadDistrictBoundaries();
+      }
+
+      // Function to load district boundaries from Shapefiles
+      function loadDistrictBoundaries() {
+        // Path to the directory containing the Shapefiles
+        const shapefilePath = "html-client/shapefiles/districts.shp";
+        const dbfPath = "html-client/shapefiles/districts.dbf";
+
+        // Load the shapefile
+        new L.Shapefile(shapefilePath, {
+          style: function () {
+            return { color: "white", weight: 1, fillOpacity: 0.5 };
+          }
+        }).addTo(districtMap).on("data:loaded", function () {
+          console.log("Shapefile loaded successfully!");
+        });
+      }
+
+      // Placeholder for updating district data (API calls)
+      function updateDistrictData(date) {
+        // Use the selected date to fetch and update district information
+      }
+    </script>
+  </body>
+</html>
