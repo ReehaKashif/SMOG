@@ -1,0 +1,138 @@
+// Load Shapefiles for each district using the fetched data
+getDistrictAqiColor()
+  .then((d) => {
+    const districts = ["aoi_punjab", ...data.districts];
+    
+    Promise.all(
+      districts.map(async (district) => {
+        // Replace spaces with underscores to match shapefile naming format
+        const formattedDistrict = district.replace(/\s+/g, "_");
+        const shapefilePath = `./shapefiles/${formattedDistrict}.shp`;
+
+        // Get the current district data for AQI and other info
+        const currentDistrict = d.districts_aqi_color.find(
+          (data) => data.district === district
+        );
+
+        // Fetch weather data for the district
+        const { temp, windspeed } = await getWeatherData(district);
+
+        // Get the source contribution and related HTML content
+        const { sourceWithHighestContribution, html } = await calculateSourceContribution(district);
+
+        // Construct popup content with district information
+        const popupContent = `
+          <div class="flex gap-8">
+            <span><strong>District:</strong> ${district === "aoi_punjab" ? "Punjab" : currentDistrict["district"]}</span>
+            <span><strong>AQI:</strong> ${Math.round(currentDistrict["aqi"] || 0)}</span>
+          </div>
+          <div class="flex gap-8">
+            <span><strong>Temp:</strong> ${temp} °C</span>
+            <span><strong>Windspeed:</strong> ${windspeed} km/h</span>
+          </div>
+          <hr />
+          <div>${html}</div>`;
+
+        // Determine the color for the district based on the pollutant source
+        const districtColour = sourceWithHighestContribution
+          ? sources_color[sourceWithHighestContribution]
+          : sources_color["All"];
+
+        // Create an object with district information
+        const districtInfo = {
+          district: district === "aoi_punjab" ? "Punjab" : currentDistrict["district"],
+          color: districtColour,
+          aqi: district === "aoi_punjab" ? 0 : currentDistrict["aqi"],
+        };
+
+        // Load the shapefile and visualize on the map
+        return await loadShapefile(
+          shapefilePath,
+          districtInfo,
+          pollutantDistrictsMap,
+          popupContent
+        );
+      })
+    ).catch((error) => console.error("Error loading Shapefiles:", error));
+  })
+  .catch((error) => console.error("Error fetching district data:", error));
+
+// Function to get weather data for a specific district
+const getWeatherData = async (district) => {
+  const data = await getWeatherDataApi();
+  const districtIndex = data.District.findIndex((d) => d === district);
+
+  // Handle case where district might not be found
+  if (districtIndex === -1) {
+    console.warn(`Weather data not found for district: ${district}`);
+    return {
+      temp: "N/A",
+      windspeed: "N/A",
+    };
+  }
+
+  const temp = Math.round(data.Temperature[districtIndex]);
+  const windspeed = Math.round(data.Wind_speed[districtIndex]);
+
+  return {
+    temp,
+    windspeed,
+  };
+};
+
+// Function to fetch weather data from API
+const getWeatherDataApi = () => {
+  const weatherData = getLocalStorage("weather_data");
+  if (weatherData) {
+    return weatherData;
+  }
+
+  return fetch(`${SERVER_URL}/weather_data`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      setLocalStorage("weather_data", data);
+      return data;
+    })
+    .catch((err) => {
+      console.error("Fetch error:", err);
+      return null;
+    });
+};
+
+// Function to load and visualize the shapefile on the map
+async function loadShapefile(shapefilePath, districtInfo, map, popupContent) {
+  try {
+    const response = await fetch(shapefilePath);
+    const arrayBuffer = await response.arrayBuffer();
+
+    // Parse the shapefile using shapefile.js
+    shapefile
+      .open(arrayBuffer)
+      .then((source) =>
+        source.read().then(function log(result) {
+          if (result.done) return;
+
+          const geojson = result.value;
+          const layer = L.geoJSON(geojson, {
+            style: {
+              color: districtInfo.color,
+              fillOpacity: 0.5,
+            },
+          }).addTo(map);
+
+          // Bind popup with district information
+          layer.bindPopup(popupContent);
+          source.read().then(log);
+        })
+      )
+      .catch((error) => console.error("Error parsing shapefile:", error));
+  } catch (error) {
+    console.error(`Error loading shapefile from ${shapefilePath}:`, error);
+  }
+}
+
