@@ -1,0 +1,112 @@
+// Colors for the different sources
+const sourceColors = {
+  'Vehicles': "#ffa500",
+  'Industry': "#f2af2a",
+  'Construction': "#ff2600",
+  'Agriculture': "#36454f",
+  'Miscellaneous': "#7a288a",
+  'Residential': "#ADD8E6"
+};
+
+// Function to determine which source to color by based on selected ranking
+function getSourceByRanking(data, ranking) {
+  const sources = [
+    { name: 'Vehicles', percent: data['Vehicle%'] },
+    { name: 'Industry', percent: data['Industry%'] },
+    { name: 'Agriculture', percent: data['Agriculture%'] },
+    { name: 'Construction', percent: data['Construction%'] },
+    { name: 'Residential', percent: data['Residential%'] },
+    { name: 'Miscellaneous', percent: data['Misc%'] }
+  ];
+
+  // Sort sources by percentage in descending order
+  sources.sort((a, b) => b.percent - a.percent);
+
+  // Get source based on ranking
+  if (ranking === 'top') {
+    return sources[0];
+  } else if (ranking === 'second') {
+    return sources[1];
+  } else if (ranking === 'third') {
+    return sources[2];
+  }
+
+  return null;
+}
+
+// Update district data with selected ranking
+async function updateDistrictData(date, ranking) {
+  const formattedDate = new Date(date).toLocaleDateString('en-US');
+
+  for (const [district, coordinates] of Object.entries(districtCoordinates)) {
+    try {
+      const response = await fetch(`https://smog-server.onrender.com/api/october_sources?input_date=${encodeURIComponent(formattedDate)}&input_district=${encodeURIComponent(district)}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+
+      // Determine source for coloring based on ranking
+      const selectedSource = getSourceByRanking(data, ranking);
+      const color = selectedSource ? sourceColors[selectedSource.name] : 'gray';
+
+      // Create content for the popup
+      const popupContent = `
+        <div>
+          <strong>District:</strong> ${district}<br/>
+          <strong>AQI:</strong> ${data.Sum_of_Sources.toFixed(0)}<br/>
+          <strong>Temp:</strong> ${data.Temperature || '-'}<br/>
+          <strong>Windspeed:</strong> ${data.Windspeed || '-'}<br/>
+          <table class="table table-bordered mt-2">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Value</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Vehicles</td><td>${data.Vehicle.toFixed(0)}</td><td>${data['Vehicle%'].toFixed(0)}%</td></tr>
+              <tr><td>Industry</td><td>${data.Industry.toFixed(0)}</td><td>${data['Industry%'].toFixed(0)}%</td></tr>
+              <tr><td>Agriculture</td><td>${data.Agriculture.toFixed(0)}</td><td>${data['Agriculture%'].toFixed(0)}%</td></tr>
+              <tr><td>Construction</td><td>${data.Construction.toFixed(0)}</td><td>${data['Construction%'].toFixed(0)}%</td></tr>
+              <tr><td>ResidentialHeat</td><td>${data.Residential.toFixed(0)}</td><td>${data['Residential%'].toFixed(0)}%</td></tr>
+              <tr><td>Misc</td><td>${data.Misc.toFixed(0)}</td><td>${data['Misc%'].toFixed(0)}%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      // Add a marker for each district and bind the popup
+      const marker = L.marker(coordinates, { color }).addTo(map);
+      marker.bindPopup(popupContent);
+    } catch (error) {
+      console.error(`Failed to fetch data for ${district}:`, error);
+    }
+  }
+}
+
+// Event listener for date picker and ranking dropdown changes
+document.getElementById('date-picker').addEventListener('change', function () {
+  const selectedDate = this.value;
+  const selectedRanking = document.getElementById('source-ranking').value;
+  if (selectedDate) {
+    map.eachLayer((layer) => {
+      if (layer instanceof L.Marker) {
+        map.removeLayer(layer);
+      }
+    });
+    updateDistrictData(selectedDate, selectedRanking);
+  }
+});
+
+document.getElementById('source-ranking').addEventListener('change', function () {
+  const selectedDate = document.getElementById('date-picker').value;
+  const selectedRanking = this.value;
+  if (selectedDate) {
+    map.eachLayer((layer) => {
+      if (layer instanceof L.Marker) {
+        map.removeLayer(layer);
+      }
+    });
+    updateDistrictData(selectedDate, selectedRanking);
+  }
+});
