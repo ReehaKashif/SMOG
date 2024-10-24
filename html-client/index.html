@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Display GeoJSON Locally on Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h2>District Boundaries Display from Local GeoJSON</h2>
+    <div id="map"></div>
+
+    <script>
+        // Initialize the Leaflet map
+        const map = L.map('map').setView([30.3753, 69.3451], 5); // Center on Pakistan for example
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+        }).addTo(map);
+
+        // Load the GeoJSON file locally
+        fetch('html-client/Districts_JSON.geojson')
+            .then(response => response.json())
+            .then(geojsonData => {
+                L.geoJSON(geojsonData).addTo(map);
+            })
+            .catch(error => console.error('Error loading GeoJSON:', error));
+    </script>
+</body>
+</html>
