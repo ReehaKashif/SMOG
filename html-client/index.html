@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>District Pollutant Rank Map</title>
+
+    <!-- Include Leaflet.js CSS and JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Include Terraformer and parsers for WKT to GeoJSON conversion -->
+    <script src="https://unpkg.com/terraformer@1.0.8"></script>
+    <script src="https://unpkg.com/terraformer-wkt-parser@1.1.2"></script>
+
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Pollutant Data by District Rank</h1>
+
+    <!-- Date input and pollutant rank selection -->
+    <label for="date">Select a Date:</label>
+    <input type="date" id="date" value="2024-10-20" onchange="fetchPollutantData()">
+    <br><br>
+
+    <label for="rankSelect">Select Pollutant Rank:</label>
+    <select id="rankSelect" onchange="fetchPollutantData()">
+        <option value="1">Top Pollutant</option>
+        <option value="2">Second Top Pollutant</option>
+        <option value="3">Third Top Pollutant</option>
+    </select>
+    <br><br>
+
+    <!-- Div for the map -->
+    <div id="map"></div>
+
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([30.3753, 69.3451], 18); // Centered on Pakistan
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18
+        }).addTo(map);
+
+        let districtLayer;
+
+        // Color coding based on pollutant category
+        function getColorByCategory(category) {
+            switch (category) {
+                case 'Vehicles': return '#FF0000'; // Red for vehicles
+                case 'Industry': return '#FFA500'; // Orange for industry
+                case 'Residential': return '#FFFF00'; // Yellow for residential
+                case 'Miscellaneous': return '#00FF00'; // Green for miscellaneous
+                case 'Construction': return '#0000FF'; // Blue for construction
+                case 'Agriculture': return '#800080'; // Purple for agriculture
+                default: return '#808080'; // Gray for unknown
+            }
+        }
+
+        // Function to fetch pollutant data based on the selected date
+        function fetchPollutantData() {
+            const selectedDate = document.getElementById('date').value;
+            const rank = document.getElementById('rankSelect').value; // Get selected rank103.111.161.121
+
+            fetch('http://103.111.161.121:3000/districts')
+                .then(response => response.json())
+                .then(districtData => {
+                    fetchEmissionData(selectedDate, rank, districtData);
+                })
+                .catch(error => console.error('Error fetching district data:', error));
+        }
+
+        // Fetch districts data from API
+        let districts = [];
+        fetch('http://103.111.161.121:3000/districts')
+            .then(response => response.json())
+            .then(data => {
+                districts = data;
+                addDistrictsToMap(data);
+                fetchPollutantData(); // Fetch pollutant data after districts are loaded
+            })
+            .catch(error => console.error('Error fetching district data:', error));
+
+        // Function to add districts as polygons on the map
+        function addDistrictsToMap(districts) {
+            districts.forEach(district => {
+                const wkt = district.wkt;
+
+                try {
+                    const geojson = Terraformer.WKT.parse(wkt); // Parse WKT to GeoJSON using Terraformer
+                    const polygon = L.geoJSON(geojson).addTo(map);
+                    polygon.bindPopup(district.district); // Bind a popup to show the district name
+
+                    // Add click event to show pollutant data
+                    polygon.on('click', function(event) {
+                        fetchPollutantDataForDistrict(district.district, event); // Pass event to the function
+                    });
+                } catch (error) {
+                    console.error(`Error parsing WKT for district: ${district.district}`, error);
+                }
+            });
+        }
+
+        // Fetch emission data for each district and update the map
+        function fetchEmissionData(selectedDate, rank, districtData) {
+            fetch(`http://103.111.161.121:3000/emissions?date=${selectedDate}`)
+                .then(response => response.json())
+                .then(emissionData => {
+                    updateMapWithEmissionData(emissionData, districtData, rank);
+                })
+                .catch(error => console.error('Error fetching emission data:', error));
+        }
+
+        // Function to update the map with emission data
+        function updateMapWithEmissionData(emissions, districts, rank) {
+            if (districtLayer) {
+                map.removeLayer(districtLayer); // Remove old layers if they exist
+            }
+
+            districtLayer = L.geoJSON(null).addTo(map); // Initialize empty layer to update later
+
+            districts.forEach(district => {
+                const districtName = district.district; // Update from district to district.district
+                const wkt = district.wkt;
+
+                // Find the corresponding emission data for this district
+                const emission = emissions.find(e => e.district_name === districtName);
+
+                if (emission) {
+                    try {
+                        const geojson = Terraformer.WKT.parse(wkt); // Parse WKT to GeoJSON using Terraformer
+
+                        // Get the rank category based on user selection
+                        const rankedCategories = getRankedCategories(emission);
+
+                        // Get the category based on selected rank
+                        const category = rankedCategories[rank - 1]; // rank is 1-based index
+
+                        // Set a color based on the selected category
+                        const color = getColorByCategory(category);
+
+                        const popupContent = `
+                            <strong>District:</strong> ${districtName} <br/>
+                            <strong>Rank ${rank} Pollutant:</strong> ${category} <br/>
+                            <strong>Vehicle Emission:</strong> ${emission['max_vehicle_emission']} (Contribution: ${emission['max_vehicle_contribution']}%)<br/>
+                            <strong>Industry Emission:</strong> ${emission['max_industry_emission']} (Contribution: ${emission['max_industry_contribution']}%)<br/>
+                            <strong>Residential Emission:</strong> ${emission['max_residential_emission']} (Contribution: ${emission['max_residential_contribution']}%)<br/>
+                            <strong>Miscellaneous Emission:</strong> ${emission['max_misc_emission']} (Contribution: ${emission['max_misc_contribution']}%)<br/>
+                            <strong>Construction Emission:</strong> ${emission['max_construction_emission']} (Contribution: ${emission['max_construction_contribution']}%)<br/>
+                            <strong>Agriculture Emission:</strong> ${emission['max_agriculture_emission']} (Contribution: ${emission['max_agriculture_contribution']}%)
+                        `;
+
+                        // Create the polygon with the specific color and bind the popup
+                        const polygon = L.geoJSON(geojson, {
+                            style: {
+                                color: color,
+                                fillColor: color,
+                                fillOpacity: 0.7,
+                                weight: 2
+                            }
+                        }).addTo(districtLayer);
+
+                        polygon.bindPopup(popupContent);
+                    } catch (error) {
+                        console.error(`Error parsing WKT for district: ${districtName}`, error);
+                    }
+                }
+            });
+
+            // Fit the map to the bounds of the districtLayer
+            if (districtLayer.getLayers().length > 0) {
+                const bounds = districtLayer.getBounds();
+                map.fitBounds(bounds);
+            }
+        }
+
+        // Function to get ranked categories based on emissions
+        function getRankedCategories(emission) {
+            const categories = {
+                Vehicles: parseFloat(emission['max_vehicle_emission']),
+                Industry: parseFloat(emission['max_industry_emission']),
+                Residential: parseFloat(emission['max_residential_emission']),
+                Miscellaneous: parseFloat(emission['max_misc_emission']),
+                Construction: parseFloat(emission['max_construction_emission']),
+                Agriculture: parseFloat(emission['max_agriculture_emission'])
+            };
+
+            // Sort pollutants by their emission value in descending order
+            const sortedCategories = Object.entries(categories)
+                .sort(([, a], [, b]) => b - a)
+                .map(([key]) => key);
+
+            return sortedCategories; // Return the sorted categories
+        }
+
+        // Function to fetch pollutant data for a specific district
+        function fetchPollutantDataForDistrict(districtName, event) { // Accept the event parameter
+            const selectedDate = document.getElementById('date').value; // Get the selected date
+            const rank = document.getElementById('rankSelect').value; // Get selected rank
+
+            fetch(`http://103.111.161.121:3000/emissions?date=${selectedDate}&district=${districtName}`)
+                .then(response => response.json())
+                .then(emission => {
+                    const rankedCategories = getRankedCategories(emission); // Get ranked categories
+                    const category = rankedCategories[rank - 1]; // Get the selected rank category
+
+                    const popupContent = `
+                        <strong>District:</strong> ${districtName} <br/>
+                        <strong>Rank ${rank} Pollutant:</strong> ${category} <br/>
+                        <strong>Vehicle Emission:</strong> ${emission['max_vehicle_emission']} <br/>
+                        <strong>Industry Emission:</strong> ${emission['max_industry_emission']} <br/>
+                        <strong>Residential Emission:</strong> ${emission['max_residential_emission']} <br/>
+                        <strong>Miscellaneous Emission:</strong> ${emission['max_misc_emission']} <br/>
+                        <strong>Construction Emission:</strong> ${emission['max_construction_emission']} <br/>
+                        <strong>Agriculture Emission:</strong> ${emission['max_agriculture_emission']}
+                    `;
+                    const layer = event.target; // Get the layer that triggered the event
+                    layer.bindPopup(popupContent).openPopup(); // Update the popup for the clicked district
+                })
+                .catch(error => console.error('Error fetching emission data:', error));
+        }
+    </script>
+</body>
+</html>
