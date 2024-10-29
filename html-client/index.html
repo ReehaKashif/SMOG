@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDVI Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        #map-container {
+            width: 100%;
+            height: 600px;
+            border: none;
+            margin-top: 20px;
+        }
+        .slider-container {
+            margin: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>NDVI Dashboard</h1>
+
+    <!-- Slider for selecting year -->
+    <div class="slider-container">
+        <label for="year">Year:</label>
+        <input type="range" id="year" min="2016" max="2023" value="2016" step="1" oninput="updateYearDisplay(this.value)">
+        <span id="year-display">2016</span>
+    </div>
+
+    <!-- Slider for selecting quarter -->
+    <div class="slider-container">
+        <label for="quarter">Quarter:</label>
+        <input type="range" id="quarter" min="1" max="4" value="1" step="1" oninput="updateQuarterDisplay(this.value)">
+        <span id="quarter-display">Q1</span>
+    </div>
+
+    <!-- iframe to load the selected NDVI map -->
+    <iframe id="map-container" src="ndvi_maps/NDVI_Q1_2016.html" width="100%" height="600"></iframe>
+
+    <script>
+        function updateMap() {
+            // Get selected year and quarter
+            const year = document.getElementById('year').value;
+            const quarter = document.getElementById('quarter').value;
+
+            // Construct the file path for the selected map
+            const mapFilePath = `ndvi_maps/NDVI_Q${quarter}_${year}.html`;
+
+            // Update the iframe source to load the selected map
+            document.getElementById('map-container').src = mapFilePath;
+        }
+
+        function updateYearDisplay(year) {
+            document.getElementById('year-display').innerText = year;
+            updateMap();
+        }
+
+        function updateQuarterDisplay(quarter) {
+            document.getElementById('quarter-display').innerText = 'Q' + quarter;
+            updateMap();
+        }
+
+            
+
+        // Initialize map on page load
+        window.onload = initMap;
+    </script>
+</body>
+</html>
+
