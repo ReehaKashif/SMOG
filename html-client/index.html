@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDVI Visualization</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+        .control {
+            margin: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Forest Cover</h1>
+    <div class="control">
+        <label for="yearSlider">Select Year:</label>
+        <input type="range" id="yearSlider" min="2016" max="2024" value="2016" step="1">
+        <span id="yearDisplay">2016</span>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-ajax/src/leaflet.ajax.js"></script>
+    <script>
+        // Initialize the map centered on Punjab, Pakistan
+        var map = L.map('map').setView([31.5204, 74.3587], 7); // Coordinates for Lahore, Punjab
+
+        // Add a tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Variable to hold the current GeoJSON layer
+        var geojsonLayer;
+
+        // Function to add GeoJSON layer
+        function addGeoJsonLayer(year) {
+            // Remove the existing GeoJSON layer if it exists
+            if (geojsonLayer) {
+                map.removeLayer(geojsonLayer);
+            }
+
+            // Create a new GeoJSON layer using the leaflet-ajax library
+            geojsonLayer = L.geoJson.ajax('geojson/NDVI_Mask_' + year + '.geojson', {
+                onEachFeature: function (feature, layer) {
+                    // No popups to show
+                },
+                style: function (feature) {
+                    return {
+                        color: 'green', // Adjust color for vegetation
+                        weight: 2,
+                        fillOpacity: 0.5 // Transparency of the fill
+                    };
+                },
+                // Add error handling
+                error: function () {
+                    console.error('Failed to load GeoJSON for year ' + year);
+                    alert('Failed to load GeoJSON for year ' + year);
+                }
+            }).addTo(map); // Add the layer to the map after creation
+        }
+
+        // Load the initial GeoJSON for the default year
+        var currentYear = 2016;
+        addGeoJsonLayer(currentYear);
+
+        // Update the map and year display when the slider changes
+        document.getElementById('yearSlider').addEventListener('input', function() {
+            currentYear = this.value;
+            document.getElementById('yearDisplay').textContent = currentYear;
+            addGeoJsonLayer(currentYear); // Load GeoJSON for selected year
+        });
+    </script>
+</body>
+</html>
