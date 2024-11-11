@@ -61,8 +61,8 @@ getMapAqi()
         <span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
         </div>
         <div class="flex gap-8">
-        <span><strong>Temp:</strong> ${temp}</span>
-        <span><strong>Windspeed:</strong> ${windspeed}</span>
+        <span><strong>Temp:</strong> ${temp}<strong>°C</strong></span>
+        <span><strong>Windspeed:</strong> ${windspeed}<strong>m/s</strong></span>
         </div>`;
 
           return loadShapefile(
@@ -136,8 +136,8 @@ getMapRanking()
         <span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
         </div>
         <div class="flex gap-8">
-        <span><strong>Temp:</strong> ${temp}</span>
-        <span><strong>Windspeed:</strong> ${windspeed}</span>
+        <span><strong>Temp:</strong> ${temp}<strong>°C</strong></span>
+        <span><strong>Windspeed:</strong> ${windspeed}<strong>m/s</strong></span>
         </div>
         `;
           return loadShapefile(

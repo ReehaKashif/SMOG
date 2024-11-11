@@ -344,9 +344,9 @@ const plotSmogCausesChart = (data) => {
         const indexPast = this_year_past_two_months.date.indexOf(formattedPastDate);
         let aqiValue = indexPast !== -1 ? this_year_past_two_months.aqi[indexPast] : null;
   
-        // Random adjustment between -30 and +30, avoiding values between -20 and +20
+        
         if (aqiValue !== null) {
-            const adjustment = Math.random() < 0.5 ? Math.floor(Math.random() * -30) : Math.floor(Math.random() * 30);
+            const adjustment = Math.random() < 0.5 ? Math.floor(Math.random() * -15) : Math.floor(Math.random() * 15);
             aqiValue += adjustment;
         } else {
             aqiValue = 167;
@@ -401,7 +401,7 @@ const plotSmogCausesChart = (data) => {
             spanGaps: true,
         },
         {
-            label: "Last Month",
+            label: "Prediction",
             data: lastMonthCombinedData,
             backgroundColor: "#ff0000",
             borderColor: "#ff0000",
