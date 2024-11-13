@@ -338,7 +338,7 @@ const plotSmogCausesChart = (data) => {
   
     for (let i = 0; i < lastMonthDays; i++) {
         const pastDate = new Date();
-        pastDate.setDate(pastDate.getDate() - i);
+        pastDate.setDate(pastDate.getDate() - i - 1);
         const formattedPastDate = pastDate.toISOString().split('T')[0];
   
         const indexPast = this_year_past_two_months.date.indexOf(formattedPastDate);
