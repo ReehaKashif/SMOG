@@ -62,7 +62,7 @@ getMapAqi()
         </div>
         <div class="flex gap-8">
         <span><strong>Temp:</strong> ${temp}<strong>°C</strong></span>
-        <span><strong>Windspeed:</strong> ${windspeed}<strong>m/s</strong></span>
+        <span><strong>Windspeed:</strong> ${windspeed}<strong>km/h</strong></span>
         </div>`;
 
           return loadShapefile(
@@ -137,7 +137,7 @@ getMapRanking()
         </div>
         <div class="flex gap-8">
         <span><strong>Temp:</strong> ${temp}<strong>°C</strong></span>
-        <span><strong>Windspeed:</strong> ${windspeed}<strong>m/s</strong></span>
+        <span><strong>Windspeed:</strong> ${windspeed}<strong>km/h</strong></span>
         </div>
         `;
           return loadShapefile(
