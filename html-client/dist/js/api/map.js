@@ -54,34 +54,16 @@ getMapAqi()
       districts.map((districtInfo) => {
         const formattedDistrict = districtInfo.district.replace(/\s+/g, "_");
         const shapefilePath = `./shapefiles/${formattedDistrict}.shp`;
-		
-		
-    // Fetch weather data for each district
-     // Fetch weather data for each district
-		getWeatherData(districtInfo.district).then(({ temp, windspeed }) => {
-			if (temp === "N/A" || windspeed === "N/A") {
-				console.warn(`Weather data missing for ${districtInfo.district}`);
-			} else {
-				console.log(`Fetched Temperature for ${districtInfo.district}:`, temp);
-				console.log(`Fetched Windspeed for ${districtInfo.district}:`, windspeed);
-			}
 
-			// Construct popup content
-			const popupContent = `
-				<div class="flex gap-8">
-					<span><strong>District:</strong> ${districtInfo.district}</span>
-					<span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
-				</div>
-				<div class="flex gap-8">
-					<span><strong>Temp:</strong> ${temp !== "N/A" ? `${temp}°C` : "Data Unavailable"}</span>
-					<span><strong>Windspeed:</strong> ${windspeed !== "N/A" ? `${windspeed} km/h` : "Data Unavailable"}</span>
-				</div>`;
-			// Use popupContent further here...
-		}).catch((error) => {
-			console.error(`Error fetching weather data for ${districtInfo.district}:`, error);
-		});
-
-	
+        getWeatherData(districtInfo.district).then(({ temp, windspeed }) => {
+          const popupContent = `<div class="flex gap-8">
+        <span><strong>District:</strong> ${districtInfo.district}</span>
+        <span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
+        </div>
+        <div class="flex gap-8">
+        <span><strong>Temp:</strong> ${temp}</span>
+        <span><strong>Windspeed:</strong> ${windspeed}</span>
+        </div>`;
 
           return loadShapefile(
             shapefilePath,
@@ -154,8 +136,8 @@ getMapRanking()
         <span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
         </div>
         <div class="flex gap-8">
-        <span><strong>Temp:</strong> ${temp}°C</span>
-        <span><strong>Windspeed:</strong> ${windspeed}km/hr</span>
+        <span><strong>Temp:</strong> ${temp}</span>
+        <span><strong>Windspeed:</strong> ${windspeed}</span>
         </div>
         `;
           return loadShapefile(
