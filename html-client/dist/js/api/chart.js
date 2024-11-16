@@ -74,26 +74,33 @@ const getForecastAqi = (district) => {
 };
 
 const getPredictionData = (district) => {
-  const lastYearPromise = fetch(`${SERVER_URL}/last_year?district=${district}`);
-  const thisYearPromise = fetch(`${SERVER_URL}/this_year?district=${district}`);
-  // const thisYearPromise = fetch(`${SERVER_URL}/this_year?district=${district}`);
+    const lastYearPromise = fetch(`${SERVER_URL}/last_year?district=${district}`);
+    const thisYearPromise = fetch(`${SERVER_URL}/this_year?district=${district}`);
+    const lastMonthPromise = fetch(`${SERVER_URL}/last_month?district_name=${district}`);
 
-  return Promise.all([lastYearPromise, thisYearPromise])
-    .then(([lastYearResponse, thisYearResponse]) => {
-      if (!lastYearResponse.ok || !thisYearResponse.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return Promise.all([lastYearResponse.json(), thisYearResponse.json()]);
-    })
-    .then(([lastYearData, thisYearData]) => {
-      plotSmogCausesChart({ ...lastYearData, ...thisYearData });
-      return;
-    })
-    .catch((err) => {
-      console.error("Fetch error:", err);
-      return null;
-    });
+    return Promise.all([lastYearPromise, thisYearPromise, lastMonthPromise])
+        .then(([lastYearResponse, thisYearResponse, lastMonthResponse]) => {
+            if (!lastYearResponse.ok || !thisYearResponse.ok || !lastMonthResponse.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return Promise.all([
+                lastYearResponse.json(), 
+                thisYearResponse.json(),
+                lastMonthResponse.json()
+            ]);
+        })
+        .then(([lastYearData, thisYearData, lastMonthData]) => {
+            plotSmogCausesChart({ 
+                last_year_data: lastYearData, 
+                this_year_data: thisYearData, 
+                last_month_data: lastMonthData // Include the last month data
+            });
+        })
+        .catch((err) => {
+            console.error("Fetch error:", err);
+        });
 };
+
 
 const getGreeneryData = (district) => {
   const data = {
@@ -285,21 +292,19 @@ const plotPredictionGraph = (data) => {
   // });
 };
 
-const plotSmogCausesChart = async (data) => {
-    const last_year_next_two_months = data["last_year_data"]["next_two_months"];
-    const last_year_past_two_months = data["last_year_data"]["past_two_months"];
+const plotSmogCausesChart = (data) => {
+    const lastYearNextTwoMonths = data["last_year_data"]["next_two_months"];
+    const lastYearPastTwoMonths = data["last_year_data"]["past_two_months"];
+    const thisYearNextTwoMonths = data["this_year_data"]["next_two_months"];
+    const thisYearPastTwoMonths = data["this_year_data"]["past_two_months"];
+    const lastMonthData = data["last_month_data"]; // Use last month data directly
 
-    const this_year_next_two_months = data["this_year_data"]["next_two_months"];
-    const this_year_past_two_months = data["this_year_data"]["past_two_months"];
-
-    // Fetch current year's last month data from the API
-    const currentYearResponse = await fetch('/api/last_month');
-    const currentYearData = await currentYearResponse.json();
-
+    // Generate date range for the past, current, and next two months
     const currentDate = new Date();
     const startDate = new Date(currentDate);
-    startDate.setMonth(currentDate.getMonth() - 1); // One month before current date
+    startDate.setMonth(currentDate.getMonth() - 1); // One month before the current date
     const endDate = new Date(currentDate);
+    endDate.setMonth(currentDate.getMonth() + 1); // One month after the current date
 
     const dateRange = [];
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -308,41 +313,33 @@ const plotSmogCausesChart = async (data) => {
 
     console.log("Date range for the chart:", dateRange.map(date => date.toISOString().split('T')[0]));
 
-    const lastYearData = dateRange.map((date) => {
-        const formattedDate = convertDateFormat(date, false);
-        const pastIndex = last_year_past_two_months.date.findIndex(
-            (d) => convertDateFormat(d, false) === formattedDate
-        );
-        const nextIndex = last_year_next_two_months.date.findIndex(
-            (d) => convertDateFormat(d, false) === formattedDate
-        );
+    // Map data to the date range
+    const mapDataToDateRange = (dataSet) => {
+        return dateRange.map((date) => {
+            const formattedDate = convertDateFormat(date, false);
+            const index = dataSet.date.findIndex((d) => convertDateFormat(d, false) === formattedDate);
+            return index !== -1 ? dataSet.aqi[index] : null;
+        });
+    };
 
-        return pastIndex !== -1 ? last_year_past_two_months.aqi[pastIndex]
-            : nextIndex !== -1 ? last_year_next_two_months.aqi[nextIndex]
-            : null;
-    });
+    const lastYearData = [
+        ...mapDataToDateRange(lastYearPastTwoMonths),
+        ...mapDataToDateRange(lastYearNextTwoMonths),
+    ];
 
-    const thisYearData = dateRange.map((date) => {
-        const formattedDate = convertDateFormat(date, false);
-        const pastIndex = this_year_past_two_months.date.findIndex(
-            (d) => convertDateFormat(d, false) === formattedDate
-        );
-        const nextIndex = this_year_next_two_months.date.findIndex(
-            (d) => convertDateFormat(d, false) === formattedDate
-        );
+    const thisYearData = [
+        ...mapDataToDateRange(thisYearPastTwoMonths),
+        ...mapDataToDateRange(thisYearNextTwoMonths),
+    ];
 
-        return pastIndex !== -1 ? this_year_past_two_months.aqi[pastIndex]
-            : nextIndex !== -1 ? this_year_next_two_months.aqi[nextIndex]
-            : null;
-    });
-
-    const currentYearAQI = dateRange.map((date) => {
+    // Directly map the last month data without adjustments
+    const lastMonthMappedData = dateRange.map((date) => {
         const formattedDate = date.toISOString().split('T')[0];
-        const index = currentYearData.date.findIndex((d) => d === formattedDate);
-        return index !== -1 ? currentYearData.aqi[index] : null;
+        const index = lastMonthData.date.indexOf(formattedDate);
+        return index !== -1 ? lastMonthData.aqi[index] : null;
     });
 
-    console.log("Final Current Year Data:", currentYearAQI);
+    console.log("Final Last Month Data:", lastMonthMappedData);
 
     const datasets = [
         {
@@ -361,7 +358,7 @@ const plotSmogCausesChart = async (data) => {
             borderColor: '#ff0000',
             fill: false,
             segment: {
-                borderColor: function (context) {
+                borderColor: function(context) {
                     const index = context.p0DataIndex;
                     const label = context.chart.data.labels[index];
                     if (!label) return '#ff0000';
@@ -388,7 +385,7 @@ const plotSmogCausesChart = async (data) => {
         },
         {
             label: "Current Year",
-            data: currentYearAQI,
+            data: lastMonthMappedData, // Use mapped last month data without adjustments
             backgroundColor: '#000000',
             borderColor: '#000000',
             fill: false,
@@ -431,6 +428,30 @@ const plotSmogCausesChart = async (data) => {
                 legend: {
                     labels: {
                         color: 'black', // Legend text color
+                        generateLabels: function(chart) {
+                            const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            return [
+                                ...originalLabels,
+                                {
+                                    text: "Next 7 Days",
+                                    fillStyle: '#8B0000',
+                                    strokeStyle: '#8B0000',
+                                    lineDash: [],
+                                },
+                                {
+                                    text: "Next 14 Days",
+                                    fillStyle: '#ff0000',
+                                    strokeStyle: '#ff0000',
+                                    lineDash: [],
+                                },
+                                {
+                                    text: "After 14 Days",
+                                    fillStyle: '#FF7F7F',
+                                    strokeStyle: '#FF7F7F',
+                                    lineDash: [],
+                                },
+                            ];
+                        }
                     },
                 },
             },
