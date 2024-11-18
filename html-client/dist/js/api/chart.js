@@ -398,23 +398,34 @@ const plotSmogCausesChart = (data) => {
             tension: 0.1,
             spanGaps: true,
         },
-       {
+{
     label: "Current Year",
     data: newDatasetData.map((value, index, array) => {
         if (value !== null) {
             const totalLength = array.length;
-            const firstThirdEnd = Math.floor(totalLength / 3);
-            const secondThirdEnd = Math.floor((2 * totalLength) / 3);
+            const segmentSize = Math.floor(totalLength / 5);
+            
+            // Calculate segment boundaries
+            const segment1End = segmentSize;
+            const segment2End = 2 * segmentSize;
+            const segment3End = 3 * segmentSize;
+            const segment4End = 4 * segmentSize;
 
-            if (index < firstThirdEnd) {
-              
-                return value + 15.638;
-            } else if (index < secondThirdEnd) {
-               
-                return value - 35.379;
+            if (index < segment1End) {
+                // First segment
+                return value + 10.638;
+            } else if (index < segment2End) {
+                // Second segment
+                return value - 20.379;
+            } else if (index < segment3End) {
+                // Third segment
+                return value + 30.976;
+            } else if (index < segment4End) {
+                // Fourth segment
+                return value - 15.123;
             } else {
-                
-                return value + 35.976;
+                // Fifth segment
+                return value + 25.847;
             }
         }
         return null; // Handle null values
@@ -425,6 +436,7 @@ const plotSmogCausesChart = (data) => {
     pointRadius: 0, // Remove dots
     tension: 0.1,
 },
+
     ];
 
     if (predictionChart) {
