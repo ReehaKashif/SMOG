@@ -424,7 +424,7 @@ const plotSmogCausesChart = (data) => {
             } else if (index < segment3End) {
                 return value - 18.976; // Segment 3
             } else if (index < segment4End) {
-                return value + 28.123; // Segment 4
+                return value + 18.123; // Segment 4
             } else if (index < segment5End) {
                 return value - 32.847; // Segment 5
             } else if (index < segment6End) {
