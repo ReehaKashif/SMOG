@@ -400,7 +400,7 @@ const plotSmogCausesChart = (data) => {
         },
 		{
 			label: "Current Year",
-			data: newDatasetData.map(value => (value !== null ? value : null)), // No subtraction
+			data: newDatasetData.map(value => (value !== null ? value : null)), 
 			backgroundColor: '#000000',
 			borderColor: '#000000',
 			fill: false,
