@@ -398,72 +398,16 @@ const plotSmogCausesChart = (data) => {
             tension: 0.1,
             spanGaps: true,
         },
-{
-    label: "Current Year",
-    data: newDatasetData.map((value, index, array) => {
-        if (value !== null) {
-            const totalLength = array.length;
-            const segmentSize = Math.floor(totalLength / 15); // Size of each segment
-
-            // Calculate segment boundaries
-            const segment1End = segmentSize;
-            const segment2End = 2 * segmentSize;
-            const segment3End = 3 * segmentSize;
-            const segment4End = 4 * segmentSize;
-            const segment5End = 5 * segmentSize;
-            const segment6End = 6 * segmentSize;
-            const segment7End = 7 * segmentSize;
-            const segment8End = 8 * segmentSize;
-            const segment9End = 9 * segmentSize;
-            const segment10End = 10 * segmentSize;
-            const segment11End = 11 * segmentSize;
-            const segment12End = 12 * segmentSize;
-            const segment13End = 13 * segmentSize;
-            const segment14End = 14 * segmentSize;
-
-            // Apply transformations based on segment
-            if (index < segment1End) {
-                return value - 20.638; // Segment 1
-            } else if (index < segment2End) {
-                return value + 15.379; // Segment 2
-            } else if (index < segment3End) {
-                return value - 18.976; // Segment 3
-            } else if (index < segment4End) {
-                return value + 18.123; // Segment 4
-            } else if (index < segment5End) {
-                return value - 22.847; // Segment 5
-            } else if (index < segment6End) {
-                return value + 17.456; // Segment 6
-            } else if (index < segment7End) {
-                return value - 23.234; // Segment 7
-            } else if (index < segment8End) {
-                return value + 13.678; // Segment 8
-            } else if (index < segment9End) {
-                return value - 22.567; // Segment 9
-            } else if (index < segment10End) {
-                return value + 11.456; // Segment 10
-            } else if (index < segment11End) {
-                return value - 19.234; // Segment 11
-            } else if (index < segment12End) {
-                return value + 16.789; // Segment 12
-            } else if (index < segment13End) {
-                return value - 21.567; // Segment 13
-            } else if (index < segment14End) {
-                return value + 14.678; // Segment 14
-            } else {
-                return value - 20.345; // Segment 15
-            }
-        }
-        return null; // Handle null values
-    }),
-    backgroundColor: '#000000',
-    borderColor: '#000000',
-    fill: false,
-    pointRadius: 0, // Remove dots
-    tension: 0.1,
-},
-
-    ];
+		{
+			label: "Current Year",
+			data: newDatasetData.map(value => (value !== null ? value : null)), 
+			backgroundColor: '#000000',
+			borderColor: '#000000',
+			fill: false,
+			pointRadius: 0, // Remove dots
+			tension: 0.1,
+		}, 
+	];
 
     if (predictionChart) {
         predictionChart.destroy();
