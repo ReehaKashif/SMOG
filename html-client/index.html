@@ -1278,10 +1278,13 @@
             });
           }
 
-          // Automatically set the date to today and update the data
-            const currentDate = getCurrentDate();
-            document.getElementById('date-picker').value = currentDate;
-            updateDistrictData(currentDate, 'top');
+          // Automatically set the date to one day before today and update the data
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1); // Subtract one day
+            const formattedDate = yesterday.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+            document.getElementById('date-picker').value = formattedDate;
+            updateDistrictData(formattedDate, 'top');
 
 
           // Event listener for date and source ranking change
