@@ -797,111 +797,190 @@ const roundNullableData = (data) => {
 
 
 async function fetchAQIPredictionData() {
-  try {
-      const district = document.getElementById('predictionDistrictSelect').value;
+    try {
+        const district = document.getElementById('predictionDistrictSelect').value;
 
-      // Fetch data
-      const thisYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_this_year/?district=${district}`);
-      const thisYearData = await thisYearResponse.json();
-      const lastYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_last_year/?district=${district}`);
-      const lastYearData = await lastYearResponse.json();
+        // Fetch data
+        const thisYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_this_year/?district=${district}`);
+        const thisYearData = await thisYearResponse.json();
+        const lastYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_last_year/?district=${district}`);
+        const lastYearData = await lastYearResponse.json();
+        
+        // Fetch last month's AQI data
+        const lastMonthResponse = await fetch(`https://smog-aqi-server.onrender.com/api/last_month/?district_name=${district}`);
+        const lastMonthData = await lastMonthResponse.json();
 
-      // Process data
-      const datesThisYear = thisYearData.before_period.date.concat(thisYearData.after_period.date);
-      const minThisYear = thisYearData.before_period.min.concat(thisYearData.after_period.min);
-      const maxThisYear = thisYearData.before_period.max.concat(thisYearData.after_period.max);
-      const datesLastYear = lastYearData.before_period.date.concat(lastYearData.after_period.date);
-      const minLastYear = lastYearData.before_period.min.concat(lastYearData.after_period.min);
-      const maxLastYear = lastYearData.before_period.max.concat(lastYearData.after_period.max);
+        // Process data for this year and last year
+        const maxThisYear = thisYearData.before_period.max.concat(thisYearData.after_period.max);
+        const maxLastYear = lastYearData.before_period.max.concat(lastYearData.after_period.max);
 
-      // Destroy previous chart instance if it exists
-      if (aqiPredictionChart) {
-          aqiPredictionChart.destroy();
-      }
+        // Get the current date and calculate 30 days before today
+        const currentDate = new Date();
+        const startDate = new Date(currentDate);
+        startDate.setDate(currentDate.getDate() - 30); // 30 days before today
 
-      // Create chart
-      aqiPredictionChart = new Chart(aqiPredictionChartctx, {
-          type: 'line',
-          data: {
-              labels: datesThisYear,
-              datasets: [
-                  {
-                      label: 'Min AQI This Year',
-                      data: minThisYear,
-                      borderColor: 'rgba(255, 192, 203, 1)',
-                      backgroundColor: 'rgba(255, 192, 203, 1)',
-                      borderWidth: 2,
-                      fill: false,
-                      pointRadius: 0,
-                  },
-                  {
-                      label: 'Max AQI This Year',
-                      data: maxThisYear,
-                      borderColor: 'rgba(178,34,34, 1)',
-                      backgroundColor: 'rgba(178,34,34, 1)',
-                      borderWidth: 2,
-                      fill: false,
-                      pointRadius: 0,
-                  },
-                  {
-                      label: 'Min AQI Last Year',
-                      data: minLastYear,
-                      borderColor: 'rgba(128,128,128, 1)',
-                      backgroundColor: 'rgba(128,128,128, 1)',
-                      borderWidth: 2,
-                      fill: false,
-                      pointRadius: 0,
-                  },
-                  {
-                      label: 'Max AQI Last Year',
-                      data: maxLastYear,
-                      borderColor: 'rgba(0,0,0, 1)',
-                      backgroundColor: 'rgba(0,0,0, 1)',
-                      borderWidth: 2,
-                      fill: false,
-                      pointRadius: 0,
-                  }
-              ]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                  legend: {
-                      display: true,
-                      position: 'top',
-                      labels: {
-                          boxWidth: 20,
-                          boxHeight: 10,
-                          padding: 15,
-                      }
-                  }
-              },
-              scales: {
-                  x: {
-                      type: 'time',
-                      time: {
-                          unit: 'day',
-                          tooltipFormat: 'MMM DD, YYYY',
-                      },
-                      title: {
-                          display: true,
-                          text: 'Date'
-                      }
-                  },
-                  y: {
-                      title: {
-                          display: true,
-                          text: 'AQI'
-                      },
-                      min: 0,
-                  }
-              }
-          }
-      });
-  } catch (error) {
-      console.error('Error fetching or processing data:', error);
-  }
+        // Reformat the last month's date to match the 30 days period (from last 30 days only)
+        const lastMonthDates = lastMonthData.Date;
+        const lastMonthAQI = lastMonthData.AQI;
+
+        // Filter last month's data to only include dates within the last 30 days
+        const lastMonthFormatted = lastMonthDates.map((date, index) => {
+            const dateObj = new Date(date);
+            // Check if the date is within the last 30 days
+            if (dateObj >= startDate) {
+                return {
+                    date: dateObj, // Convert string date to Date object
+                    aqi: lastMonthAQI[index]
+                };
+            }
+            return null; // Exclude dates outside the last 30 days
+        }).filter(item => item !== null); // Remove null entries
+
+        // Generate date range: Last 30 days to next 14 days
+        const endDate = new Date(currentDate);
+        endDate.setDate(currentDate.getDate() + 14); // 14 days after today
+
+        // Create an array of dates from startDate to endDate for the X-axis
+        const dateLabels = [];
+        let tempDate = new Date(startDate);
+        while (tempDate <= endDate) {
+            dateLabels.push(new Date(tempDate)); // Push a copy of tempDate
+            tempDate.setDate(tempDate.getDate() + 1); // Increment by 1 day
+        }
+
+        // Destroy previous chart instance if it exists
+        if (aqiPredictionChart) {
+            aqiPredictionChart.destroy();
+        }
+
+        // Create chart
+        aqiPredictionChart = new Chart(aqiPredictionChartctx, {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [
+                    {
+                        label: 'Max AQI This Year',
+                        data: maxThisYear,
+                        borderColor: '#FF5C7F',
+                        backgroundColor: '#FF5C7F',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        borderDash: [5, 5], 
+                    },
+                    {
+                        label: 'Max AQI Last Year',
+                        data: maxLastYear,
+                        borderColor: 'rgba(0,0,0, 1)',
+                        backgroundColor: 'rgba(0,0,0, 1)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'Current Year',
+                        data: lastMonthFormatted.map(item => item.aqi), // Extract AQI values for last 30 days
+                        borderColor: '#FF5C7F',
+                        backgroundColor: '#FF5C7F',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            boxWidth: 20,
+                            boxHeight: 10,
+                            padding: 15,
+                        }
+                    },
+                    tooltip: {
+                        enabled: true, // Enable tooltips
+                        mode: 'index', // Show tooltips for all datasets at the same x-coordinate
+                        intersect: false, // Tooltips should appear when hovering over any part of the chart, not just the intersection
+                        callbacks: {
+                            // Custom label callback for displaying all dataset values at the same x-point
+                            label: function(tooltipItem) {
+                                // Access the label and value for all datasets
+                                const datasetLabel = tooltipItem.dataset.label || '';
+                                const value = tooltipItem.raw;
+                                return `${datasetLabel}: ${value}`;
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: [
+                            // Shaded box for last 30 days
+                            {
+                                type: 'box',
+                                xMin: startDate.getTime(),
+                                xMax: currentDate.getTime(),
+                                yMin: 0,
+                                yMax: Math.max(...maxThisYear),
+                                backgroundColor: 'rgba(169, 169, 169, 0.3)', // Grey box
+                                borderColor: 'rgba(169, 169, 169, 1)',
+                                borderWidth: 1
+                            },
+                            // Shaded box for last 7 to 14 days
+                            {
+                                type: 'box',
+                                xMin: new Date(currentDate.setDate(currentDate.getDate() - 14)).getTime(), // 14 days ago
+                                xMax: new Date(currentDate.setDate(currentDate.getDate() + 7)).getTime(), // 7 days ago
+                                yMin: 0,
+                                yMax: Math.max(...maxThisYear),
+                                backgroundColor: 'rgba(255, 192, 203, 0.3)', // Pink box
+                                borderColor: 'rgba(255, 192, 203, 1)',
+                                borderWidth: 1
+                            },
+                            // Shaded box for last 7 days
+                            {
+                                type: 'box',
+                                xMin: new Date(currentDate.setDate(currentDate.getDate() - 7)).getTime(), // 7 days ago
+                                xMax: currentDate.getTime(),
+                                yMin: 0,
+                                yMax: Math.max(...maxThisYear),
+                                backgroundColor: 'rgba(255, 99, 132, 0.3)', // Red box
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'MMM DD, YYYY',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        },
+                        min: startDate.getTime(), // Start of X-axis (last 30 days)
+                        max: endDate.getTime(),   // End of X-axis (next 14 days)
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'AQI'
+                        },
+                        min: 0,
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching or processing data:', error);
+    }
 }
 
 function sortHoursAndAQI(hours, maxAqiValues) {
