@@ -803,21 +803,19 @@ async function fetchAQIPredictionData() {
         // Fetch data
         const thisYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_this_year/?district=${district}`);
         const thisYearData = await thisYearResponse.json();
+
         const lastYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_last_year/?district=${district}`);
         const lastYearData = await lastYearResponse.json();
-        
+
         // Fetch last month's AQI data
         const lastMonthResponse = await fetch(`https://smog-aqi-server.onrender.com/api/last_month/?district_name=${district}`);
         const lastMonthData = await lastMonthResponse.json();
-
-        // Process data for this year and last year
-        const maxThisYear = thisYearData.before_period.max.concat(thisYearData.after_period.max);
-        const maxLastYear = lastYearData.before_period.max.concat(lastYearData.after_period.max);
+		
 
         // Get the current date and calculate 30 days before today
         const currentDate = new Date();
         const startDate = new Date(currentDate);
-        startDate.setDate(currentDate.getDate() - 30); // 30 days before today
+        startDate.setDate(currentDate.getDate() - 60); // 30 days before today
 
         // Reformat the last month's date to match the 30 days period (from last 30 days only)
         const lastMonthDates = lastMonthData.Date;
@@ -836,19 +834,43 @@ async function fetchAQIPredictionData() {
             return null; // Exclude dates outside the last 30 days
         }).filter(item => item !== null); // Remove null entries
 
-        // Generate date range: Last 30 days to next 14 days
-        const endDate = new Date(currentDate);
-        endDate.setDate(currentDate.getDate() + 14); // 14 days after today
+        // Function to sort and structure data based on the date
+        const sortDataByDate = (periodData) => {
+            const combinedData = periodData.date.map((date, index) => ({
+                date: new Date(date),
+                min: periodData.min[index],
+                max: periodData.max[index],
+            }));
 
-        // Create an array of dates from startDate to endDate for the X-axis
-        const dateLabels = [];
-        let tempDate = new Date(startDate);
-        while (tempDate <= endDate) {
-            dateLabels.push(new Date(tempDate)); // Push a copy of tempDate
-            tempDate.setDate(tempDate.getDate() + 1); // Increment by 1 day
-        }
+            // Sort by ascending date
+            return combinedData.sort((a, b) => a.date - b.date);
+        };
 
-        // Destroy previous chart instance if it exists
+        // Sort and merge before and after periods for this year
+        const sortedThisYearBefore = sortDataByDate(thisYearData.before_period);
+        const sortedThisYearAfter = sortDataByDate(thisYearData.after_period);
+
+        const sortedThisYear = [...sortedThisYearBefore, ...sortedThisYearAfter];
+
+        // Extract max AQI and corresponding dates for this year
+        const maxThisYear = sortedThisYear.map(item => item.max);
+        const thisYearDates = sortedThisYear.map(item => item.date);
+
+        // Sort and merge before and after periods for last year
+        const sortedLastYearBefore = sortDataByDate(lastYearData.before_period);
+        const sortedLastYearAfter = sortDataByDate(lastYearData.after_period);
+
+        const sortedLastYear = [...sortedLastYearBefore, ...sortedLastYearAfter];
+
+        // Extract max AQI and corresponding dates for last year
+        const maxLastYear = sortedLastYear.map(item => item.max);
+        const lastYearDates = sortedLastYear.map(item => item.date);
+
+        // Extract AQI and corresponding dates for last month
+        const maxLastMonth = lastMonthFormatted.map(item => item.aqi);
+        const lastMonthDatesFormatted = lastMonthFormatted.map(item => item.date);
+
+        // Destroy the previous chart if it exists
         if (aqiPredictionChart) {
             aqiPredictionChart.destroy();
         }
@@ -857,17 +879,41 @@ async function fetchAQIPredictionData() {
         aqiPredictionChart = new Chart(aqiPredictionChartctx, {
             type: 'line',
             data: {
-                labels: dateLabels,
+                labels: thisYearDates, // Use sorted dates for X-axis
                 datasets: [
                     {
-                        label: 'Max AQI This Year',
+                        label: 'Prediction',
                         data: maxThisYear,
                         borderColor: '#FF5C7F',
                         backgroundColor: '#FF5C7F',
                         borderWidth: 2,
                         fill: false,
                         pointRadius: 0,
-                        borderDash: [5, 5], 
+                        borderDash: [5, 5],
+						 segment: {
+                borderColor: function(context) {
+                    const index = context.p0DataIndex;
+                    const label = context.chart.data.labels[index];
+
+                    if (!label) return '#ff0000'; // Default to red if no label is available
+
+                    const currentDate = new Date(`${label}-2024`);
+                    const today = new Date();
+                    const diffInDays = (currentDate - today) / (1000 * 60 * 60 * 24);
+
+                    if (diffInDays > 0 && diffInDays <= 7) {
+                        return '#FF5C7F'; // Dark Red (Next 7 Days)
+                    } else if (diffInDays > 7 && diffInDays <= 14) {
+                        return '#8B0000'; // Red (Next 14 Days)
+                    } else if (diffInDays > 14) {
+                        return '#8B0000'; // Light Red (After 14 Days)
+                    } else {
+                        return '#ff0000'; // Gray for past or invalid dates
+                    }
+                },
+            },
+            tension: 0.1,
+            spanGaps: true,
                     },
                     {
                         label: 'Max AQI Last Year',
@@ -879,15 +925,24 @@ async function fetchAQIPredictionData() {
                         pointRadius: 0,
                     },
                     {
-                        label: 'Current Year',
-                        data: lastMonthFormatted.map(item => item.aqi), // Extract AQI values for last 30 days
-                        borderColor: '#FF5C7F',
+                        label: 'Current Year', // New dataset for last month's data
+                        data: maxLastMonth,
+                        borderColor: '#FF5C7F', // Customize color for last month
                         backgroundColor: '#FF5C7F',
                         borderWidth: 2,
                         fill: false,
                         pointRadius: 0,
-                    }
-                ]
+                    },
+					{
+                        label: 'Forecast', // New dataset for last month's data
+                        data: maxLastMonth,
+                        borderColor: '#8B0000', // Customize color for last month
+                        backgroundColor: '#8B0000',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                    },
+                ],
             },
             options: {
                 responsive: true,
@@ -900,59 +955,20 @@ async function fetchAQIPredictionData() {
                             boxWidth: 20,
                             boxHeight: 10,
                             padding: 15,
-                        }
+                        },
                     },
                     tooltip: {
-                        enabled: true, // Enable tooltips
-                        mode: 'index', // Show tooltips for all datasets at the same x-coordinate
-                        intersect: false, // Tooltips should appear when hovering over any part of the chart, not just the intersection
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
                         callbacks: {
-                            // Custom label callback for displaying all dataset values at the same x-point
-                            label: function(tooltipItem) {
-                                // Access the label and value for all datasets
+                            label: function (tooltipItem) {
                                 const datasetLabel = tooltipItem.dataset.label || '';
                                 const value = tooltipItem.raw;
                                 return `${datasetLabel}: ${value}`;
-                            }
-                        }
+                            },
+                        },
                     },
-                    annotation: {
-                        annotations: [
-                            // Shaded box for last 30 days
-                            {
-                                type: 'box',
-                                xMin: startDate.getTime(),
-                                xMax: currentDate.getTime(),
-                                yMin: 0,
-                                yMax: Math.max(...maxThisYear),
-                                backgroundColor: 'rgba(169, 169, 169, 0.3)', // Grey box
-                                borderColor: 'rgba(169, 169, 169, 1)',
-                                borderWidth: 1
-                            },
-                            // Shaded box for last 7 to 14 days
-                            {
-                                type: 'box',
-                                xMin: new Date(currentDate.setDate(currentDate.getDate() - 14)).getTime(), // 14 days ago
-                                xMax: new Date(currentDate.setDate(currentDate.getDate() + 7)).getTime(), // 7 days ago
-                                yMin: 0,
-                                yMax: Math.max(...maxThisYear),
-                                backgroundColor: 'rgba(255, 192, 203, 0.3)', // Pink box
-                                borderColor: 'rgba(255, 192, 203, 1)',
-                                borderWidth: 1
-                            },
-                            // Shaded box for last 7 days
-                            {
-                                type: 'box',
-                                xMin: new Date(currentDate.setDate(currentDate.getDate() - 7)).getTime(), // 7 days ago
-                                xMax: currentDate.getTime(),
-                                yMin: 0,
-                                yMax: Math.max(...maxThisYear),
-                                backgroundColor: 'rgba(255, 99, 132, 0.3)', // Red box
-                                borderColor: 'rgba(255, 99, 132, 1)',
-                                borderWidth: 1
-                            }
-                        ]
-                    }
                 },
                 scales: {
                     x: {
@@ -963,20 +979,51 @@ async function fetchAQIPredictionData() {
                         },
                         title: {
                             display: true,
-                            text: 'Date'
+                            text: 'Date',
                         },
-                        min: startDate.getTime(), // Start of X-axis (last 30 days)
-                        max: endDate.getTime(),   // End of X-axis (next 14 days)
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'AQI'
+                            text: 'AQI',
                         },
                         min: 0,
-                    }
-                }
-            }
+                    },
+                },
+            },
+			            plugins: [
+                {
+                    id: 'customBackground',
+                    beforeDraw: (chart) => {
+                        const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+
+                        const today = new Date();
+                        const grey = '#A9A9A9';
+                        const red = '#FFEFF5';
+                        const pink = '#FFB6C1';
+
+                        ctx.save();
+
+                        // Grey background (before today)
+                        const greyEnd = x.getPixelForValue(today);
+                        ctx.fillStyle = grey;
+                        ctx.fillRect(left, top, greyEnd - left, bottom - top);
+
+                        // Red background (next 7 days)
+                        const redStart = greyEnd;
+                        const redEnd = x.getPixelForValue(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000));
+                        ctx.fillStyle = red;
+                        ctx.fillRect(redStart, top, redEnd - redStart, bottom - top);
+
+                        // Pink background (after 7 days)
+                        const pinkStart = redEnd;
+                        ctx.fillStyle = pink;
+                        ctx.fillRect(pinkStart, top, right - pinkStart, bottom - top);
+
+                        ctx.restore();
+                    },
+                },
+            ],
         });
     } catch (error) {
         console.error('Error fetching or processing data:', error);
