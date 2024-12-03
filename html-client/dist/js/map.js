@@ -115,11 +115,11 @@ getMapAqi()
       const shapefilePath = `./shapefiles/${formattedDistrict}.shp`;
 
       const { temp, windspeed } = await getWeatherData(districtInfo.district, true);
-      const popupContent = `<div class="flex gap-8" style="font-size: 18px;">
+      const popupContent = `<div class="flex gap-8" style="font-size: 10px; padding: 15px; background-color: white; border-radius: 2px;">
         <span><strong>District:</strong> ${districtInfo.district}</span>
         <span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
       </div>
-      <div class="flex gap-8" style="font-size: 18px;">
+      <div class="flex gap-8" style="font-size: 10px; padding: 15px; background-color: white; border-radius: 2px;">
         <span><strong>Temp:</strong> ${temp}</span>
         <span><strong>Windspeed:</strong> ${windspeed}</span>
       </div>`;
@@ -178,12 +178,12 @@ getMapRanking()
       const shapefilePath = `./shapefiles/${formattedDistrict}.shp`;
 
       const { temp, windspeed } = await getWeatherData(districtInfo.district, true);
-      const popupContent = `<div class="flex gap-8" style="font-size: 18px;">
+      const popupContent = `<div class="flex gap-8" style="font-size: 10px; padding: 15px; background-color: white; border-radius: 2px;">
         <span><strong>Rank:</strong> ${districtInfo.rank}</span>
         <span><strong>District:</strong> ${districtInfo.district}</span>
         <span><strong>AQI:</strong> ${Math.round(districtInfo.aqi)}</span>
       </div>
-      <div class="flex gap-8" style="font-size: 18px;">
+      <div class="flex gap-8" style="font-size: 10px; padding: 15px; background-color: white; border-radius: 2px;">
         <span><strong>Temp:</strong> ${temp}</span>
         <span><strong>Windspeed:</strong> ${windspeed}</span>
       </div>`;
