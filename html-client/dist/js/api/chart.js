@@ -795,11 +795,12 @@ const roundNullableData = (data) => {
   });
 };
 
+
 async function fetchAQIPredictionData() {
     try {
         const district = document.getElementById('predictionDistrictSelect').value;
 
-        // Fetch data
+        // Fetch data from APIs
         const thisYearResponse = await fetch(`https://smog-aqi-server.onrender.com/api/min_max_this_year/?district=${district}`);
         const thisYearData = await thisYearResponse.json();
         console.log("This Year Data:", thisYearData);
@@ -825,128 +826,152 @@ async function fetchAQIPredictionData() {
             dateRange.push(new Date(d)); // Add each day to the range
         }
 
-        // Normalize the date range to remove time part (set time to midnight)
         const normalizedDateRange = dateRange.map(date => new Date(date.setHours(0, 0, 0, 0)));
         console.log("Normalized Date Range:", normalizedDateRange);
-        console.log("Count of Normalized Date Range:", normalizedDateRange.length);
 
-        // Reformat the last month's date to match the 30 days period (from last 30 days only)
+        // Process and filter Last Month data (30 days)
         const lastMonthDates = lastMonthData.Date;
         const lastMonthAQI = lastMonthData.AQI;
-
-        // Filter last month's data to only include dates within the last 30 days
         const lastMonthFormatted = lastMonthDates.map((date, index) => {
             const dateObj = new Date(date);
-            dateObj.setHours(0, 0, 0, 0); // Normalize the date
-
-            // Check if the date is within the last 30 days
-            if (dateObj >= startDate) {
-                return {
-                    date: dateObj, // Convert string date to Date object
-                    aqi: lastMonthAQI[index]
-                };
-            }
-            return null; // Exclude dates outside the last 30 days
-        }).filter(item => item !== null); // Remove null entries
+            dateObj.setHours(0, 0, 0, 0);
+            return {
+                date: dateObj,
+                aqi: lastMonthAQI[index],
+            };
+        }).filter(item => item !== null);
 
         console.log("Last Month Formatted Data:", lastMonthFormatted);
-        console.log("Count of Last Month Formatted Data:", lastMonthFormatted.length);
 
-        // Function to sort and structure data based on the date
+        // Process and sort data for this year and last year (last 30 days + 14 days forecast)
         const sortDataByDate = (periodData) => {
             const combinedData = periodData.date.map((date, index) => ({
                 date: new Date(date),
                 min: periodData.min[index],
                 max: periodData.max[index],
             }));
-
-            // Sort by ascending date
             return combinedData.sort((a, b) => a.date - b.date);
         };
 
-        // Sort and merge before and after periods for this year
-        const sortedThisYearBefore = sortDataByDate(thisYearData.before_period);
-        const sortedThisYearAfter = sortDataByDate(thisYearData.after_period);
-        const sortedThisYear = [...sortedThisYearBefore, ...sortedThisYearAfter];
-
-        console.log("Sorted This Year Data:", sortedThisYear);
-        console.log("Count of Sorted This Year Data:", sortedThisYear.length);
-
-        // Extract max AQI and corresponding dates for this year
-        const maxThisYear = sortedThisYear.map(item => item.max);
-        const thisYearDates = sortedThisYear.map(item => new Date(item.date.setHours(0, 0, 0, 0))); // Normalize dates
-
-        console.log("Max AQI This Year:", maxThisYear);
-        console.log("Count of Max AQI This Year:", maxThisYear.length);
-
-        // Sort and merge before and after periods for last year
+        // For Last Year, we want data from the last 30 days + 14 days into the future.
         const sortedLastYearBefore = sortDataByDate(lastYearData.before_period);
         const sortedLastYearAfter = sortDataByDate(lastYearData.after_period);
         const sortedLastYear = [...sortedLastYearBefore, ...sortedLastYearAfter];
 
-        console.log("Sorted Last Year Data:", sortedLastYear);
-        console.log("Count of Sorted Last Year Data:", sortedLastYear.length);
+        // For Current Year, same: last 30 days + 14 days into the future
+        const sortedThisYearBefore = sortDataByDate(thisYearData.before_period);
+        const sortedThisYearAfter = sortDataByDate(thisYearData.after_period);
+        const sortedThisYear = [...sortedThisYearBefore, ...sortedThisYearAfter];
 
-        // Extract max AQI and corresponding dates for last year
+        // Extract AQI and corresponding dates for this year, last year, and last month
+        const maxThisYear = sortedThisYear.map(item => item.max);
+        const thisYearDates = sortedThisYear.map(item => new Date(item.date.setHours(0, 0, 0, 0)));
+
         const maxLastYear = sortedLastYear.map(item => item.max);
-        const lastYearDates = sortedLastYear.map(item => new Date(item.date.setHours(0, 0, 0, 0))); // Normalize dates
+        const lastYearDates = sortedLastYear.map(item => new Date(item.date.setHours(0, 0, 0, 0)));
 
-        console.log("Max AQI Last Year:", maxLastYear);
-        console.log("Count of Max AQI Last Year:", maxLastYear.length);
-
-        // Extract AQI and corresponding dates for last month
         const maxLastMonth = lastMonthFormatted.map(item => item.aqi);
-        const lastMonthDatesFormatted = lastMonthFormatted.map(item => new Date(item.date.setHours(0, 0, 0, 0))); // Normalize dates
+        const lastMonthDatesFormatted = lastMonthFormatted.map(item => new Date(item.date.setHours(0, 0, 0, 0)));
 
         console.log("Max AQI Last Month:", maxLastMonth);
-        console.log("Count of Max AQI Last Month:", maxLastMonth.length);
+        console.log("Max AQI This Year:", maxThisYear);
+        console.log("Max AQI Last Year:", maxLastYear);
 
         // Create empty data for each day in the date range
-        const aqiPredictionData = new Array(normalizedDateRange.length).fill(null);
+        const aqiPredictionDataLastMonth = new Array(normalizedDateRange.length).fill(null);
+        const aqiPredictionDataLastYear = new Array(normalizedDateRange.length).fill(null);
+        const aqiPredictionDataThisYear = new Array(normalizedDateRange.length).fill(null);
+
+        // Define the date format function
+        const formatDate = (date) => {
+            const options = { month: 'short', day: '2-digit' };
+            return date.toLocaleDateString('en-US', options); // Formats date as 'Nov-03'
+        };
+
+        normalizedDateRange.forEach((date, i) => {
+            const formattedDate = formatDate(date); // Format the date to 'MMM-DD'
+
+            // Compare with last year data
+            const matchingDataLastYear = lastYearDates.findIndex(d => formatDate(d) === formattedDate);
+
+            if (matchingDataLastYear !== -1) {
+                // If a match is found, assign the AQI value
+                aqiPredictionDataLastYear[i] = maxLastYear[matchingDataLastYear];
+            }
+        });
 
         // Map the actual AQI data to the appropriate date
         normalizedDateRange.forEach((date, i) => {
-            // Match dates and fill in AQI values
-            const matchingDataThisYear = thisYearDates.findIndex(d => d.getTime() === date.getTime());
-            if (matchingDataThisYear !== -1) {
-                aqiPredictionData[i] = maxThisYear[matchingDataThisYear];
+            const matchingDataLastMonth = lastMonthDatesFormatted.findIndex(d => d.getTime() === date.getTime());
+            if (matchingDataLastMonth !== -1) {
+                aqiPredictionDataLastMonth[i] = maxLastMonth[matchingDataLastMonth];
             }
 
             const matchingDataLastYear = lastYearDates.findIndex(d => d.getTime() === date.getTime());
             if (matchingDataLastYear !== -1) {
-                aqiPredictionData[i] = maxLastYear[matchingDataLastYear];
+                aqiPredictionDataLastYear[i] = maxLastYear[matchingDataLastYear];
             }
 
-            const matchingDataLastMonth = lastMonthDatesFormatted.findIndex(d => d.getTime() === date.getTime());
-            if (matchingDataLastMonth !== -1) {
-                aqiPredictionData[i] = maxLastMonth[matchingDataLastMonth];
+            const matchingDataThisYear = thisYearDates.findIndex(d => d.getTime() === date.getTime());
+            if (matchingDataThisYear !== -1) {
+                aqiPredictionDataThisYear[i] = maxThisYear[matchingDataThisYear];
             }
         });
 
-        console.log("AQI Prediction Data:", aqiPredictionData);
-        console.log("Count of AQI Prediction Data:", aqiPredictionData.length);
+        console.log("AQI Prediction Data Last Month:", aqiPredictionDataLastMonth);
+        console.log("AQI Prediction Data Last Year:", aqiPredictionDataLastYear);
+        console.log("AQI Prediction Data This Year:", aqiPredictionDataThisYear);
 
         // Destroy the previous chart if it exists
         if (aqiPredictionChart) {
             aqiPredictionChart.destroy();
         }
 
-        // Create chart
+        // Create chart with three lines (Last Month, Last Year, and Current Year)
         aqiPredictionChart = new Chart(aqiPredictionChartctx, {
             type: 'line',
             data: {
-                labels: normalizedDateRange, // Use normalizedDateRange for X-axis
+                labels: normalizedDateRange.map(date => {
+                    const options = { month: 'short', day: 'numeric' };
+                    return date.toLocaleDateString('en-US', options); // Format as MMM-DD
+                }), // X-axis: Date Range
                 datasets: [
                     {
-                        label: 'Prediction',
-                        data: aqiPredictionData, // Prediction data
+                        label: 'Current Year',
+                        data: aqiPredictionDataLastMonth, // Last month data
                         borderColor: '#FF5C7F',
-                        backgroundColor: '#FF5C7F',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
                         borderWidth: 2,
                         fill: false,
                         pointRadius: 0,
-                        borderDash: [5, 5],
-                        segment: {
+                    },
+                    {
+                        label: 'Last Year',
+                        data: aqiPredictionDataLastYear, // Last year data
+                        borderColor: '#000000',
+                        backgroundColor: '#D3D3D3',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                    },
+					 {
+                        label: 'Forecast',
+                        borderColor: '#8B0000',
+                        backgroundColor: '#FFB6B6',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'Prediction',
+                        data: aqiPredictionDataThisYear, // Current year data
+                        borderColor: '#FF5C7F',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+						borderDash: [5, 5],
+						 segment: {
                             borderColor: function(context) {
                                 const index = context.p0DataIndex;
                                 const label = context.chart.data.labels[index];
@@ -970,33 +995,6 @@ async function fetchAQIPredictionData() {
                         },
                         tension: 0.1,
                         spanGaps: true,
-                    },
-                    {
-                        label: 'Max AQI Last Year',
-                        data: maxLastYear,
-                        borderColor: 'rgba(0,0,0, 1)',
-                        backgroundColor: 'rgba(0,0,0, 1)',
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0,
-                    },
-                    {
-                        label: 'Current Year',
-                        data: maxLastMonth, // Different data if needed for the Current Year
-                        borderColor: '#FF5C7F',
-                        backgroundColor: '#FF5C7F',
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0,
-                    },
-                    {
-                        label: 'Forecast',
-                        data: maxLastMonth, // Make sure this is filled with forecast data
-                        borderColor: '#8B0000',
-                        backgroundColor: '#8B0000',
-                        borderWidth: 2,
-                        fill: false,
-                        pointRadius: 0,
                     },
                 ],
             },
@@ -1026,64 +1024,88 @@ async function fetchAQIPredictionData() {
                         },
                     },
                 },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: 'day',
-                            tooltipFormat: 'MMM DD, YYYY',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Date Range',
-                        },
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'AQI',
-                        },
-                        min: 0,
-                    },
-                },
+     scales: {
+        x: {
+            type: 'time',
+            time: {
+                unit: 'day',
+                tooltipFormat: 'MMM DD',
             },
-    
-			            plugins: [
-                {
-                    id: 'customBackground',
-                    beforeDraw: (chart) => {
-                        const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+            title: {
+                display: true,
+                text: 'Date',
+            },
+        },
+        y: {
+            title: {
+                display: true,
+                text: 'AQI',
+            },
+            min: 0,
+        },
+    },
+},
+plugins: [
+    {
+        id: 'customBackground',
+        beforeDraw: (chart) => {
+            const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+            const today = new Date();
+            const grey = '#A9A9A9';
+            const red = '#FF0000';
+            const pink = '#FFB6C1';
 
-                        const today = new Date();
-                        const grey = '#A9A9A9';
-                        const red = '#FF0000';
-                        const pink = '#FFB6C1';
+            ctx.save();
 
-                        ctx.save();
+            // Normalize today to midnight in GMT+5:00
+            const normalizedToday = new Date(today.setHours(0, 0, 0, 0));
+            normalizedToday.setMinutes(normalizedToday.getMinutes() + 5 * 60);  // Adjust for GMT+5:00
 
-                        // Grey background (before today)
-                        const greyEnd = x.getPixelForValue(today);
-                        ctx.fillStyle = grey;
-                        ctx.fillRect(left, top, greyEnd - left, bottom - top);
+            // Convert dates in chart.data.labels to GMT+5:00 (if they're not already)
+            const normalizedDateRange = chart.data.labels.map(date => {
+                const dateObj = new Date(date);
+                dateObj.setMinutes(dateObj.getMinutes() + 5 * 60);  // Adjust for GMT+5:00
+                return dateObj;
+            });
 
-                        // Red background (next 7 days)
-                        const redStart = greyEnd;
-                        const redEnd = x.getPixelForValue(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000));
-                        ctx.fillStyle = red;
-                        ctx.fillRect(redStart, top, redEnd - redStart, bottom - top);
+            // Debugging: Log pixel values and verify alignment
+            normalizedDateRange.forEach((date, i) => {
+                const pixelValue = x.getPixelForValue(date);
+                console.log(`Date: ${date.toISOString()}, Pixel Value: ${pixelValue}`);
+            });
 
-                        // Pink background (after 7 days)
-                        const pinkStart = redEnd;
-                        ctx.fillStyle = pink;
-                        ctx.fillRect(pinkStart, top, right - pinkStart, bottom - top);
+            // Grey background (before today)
+            const greyEnd = x.getPixelForValue(normalizedToday);
+            console.log("Grey background ends at: ", greyEnd);
+            if (greyEnd && greyEnd > left) {
+                ctx.fillStyle = grey;
+                ctx.fillRect(left, top, greyEnd - left, bottom - top);
+            }
 
-                        ctx.restore();
-                    },
-                },
-            ],
+            // Red background (next 7 days)
+            const redStart = greyEnd;
+            const redEnd = x.getPixelForValue(new Date(normalizedToday.getTime() + 1 * 24 * 60 * 60 * 1000)); // 7 days duration
+            console.log("Red background from: ", redStart, "to: ", redEnd);
+            if (redStart && redEnd && redEnd > redStart) {
+                ctx.fillStyle = red;
+                ctx.fillRect(redStart, top, redEnd - redStart, bottom - top);
+            }
+
+            // Pink background (after 7 days)
+            const pinkStart = redEnd;
+            console.log("Pink background starts at: ", pinkStart);
+            if (pinkStart && pinkStart < right) {
+                ctx.fillStyle = pink;
+                ctx.fillRect(pinkStart, top, right - pinkStart, bottom - top);
+            }
+
+            ctx.restore();
+        },
+    },
+]
         });
     } catch (error) {
-        console.error('Error fetching or processing data:', error);
+        console.error("Error fetching AQI data:", error);
     }
 }
 
