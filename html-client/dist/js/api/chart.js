@@ -1164,7 +1164,7 @@ async function fetchMaxAQIData() {
             if (hourValue >= previousHour || previousDate === currentDate) { 
                 // Include hours after previousHour or entire day if same as current
                 hours.push(`${previousDate} ${hour}`);
-                const maxAqi = previousDateData.data.aqi[index];
+                const maxAqi = Math.round(previousDateData.data.aqi[index]);
                 maxAqiValues.push(maxAqi);
 
                 // Log the values for verification
@@ -1177,7 +1177,7 @@ async function fetchMaxAQIData() {
             const hourValue = parseInt(hour.split(":")[0]);
             if (hourValue <= currentHour) {
                 hours.push(`${currentDate} ${hour}`);
-                const maxAqi = currentDateData.data.aqi[index];
+                const maxAqi = Math.round(currentDateData.data.aqi[index]);
                 maxAqiValues.push(maxAqi);
 
                 // Log the values for verification
