@@ -847,8 +847,8 @@ async function fetchAQIPredictionData() {
         const sortDataByDate = (periodData) => {
             const combinedData = periodData.date.map((date, index) => ({
                 date: new Date(date),
-                min: periodData.min[index],
-                max: periodData.max[index],
+                min:  Math.round(periodData.min[index]),
+                max:  Math.round(periodData.max[index]),
             }));
             return combinedData.sort((a, b) => a.date - b.date);
         };
@@ -864,13 +864,13 @@ async function fetchAQIPredictionData() {
         const sortedThisYear = [...sortedThisYearBefore, ...sortedThisYearAfter];
 
         // Extract AQI and corresponding dates for this year, last year, and last month
-        const maxThisYear = sortedThisYear.map(item => item.max);
+        const maxThisYear = sortedThisYear.map(item => Math.round(item.max));
         const thisYearDates = sortedThisYear.map(item => new Date(item.date.setHours(0, 0, 0, 0)));
 
-        const maxLastYear = sortedLastYear.map(item => item.max);
+        const maxLastYear = sortedLastYear.map(item => Math.round(item.max));
         const lastYearDates = sortedLastYear.map(item => new Date(item.date.setHours(0, 0, 0, 0)));
 
-        const maxLastMonth = lastMonthFormatted.map(item => item.aqi);
+        const maxLastMonth = lastMonthFormatted.map(item =>  Math.round(item.aqi));
         const lastMonthDatesFormatted = lastMonthFormatted.map(item => new Date(item.date.setHours(0, 0, 0, 0)));
 
         console.log("Max AQI Last Month:", maxLastMonth);
@@ -1050,6 +1050,7 @@ plugins: [
         id: 'customBackground',
         beforeDraw: (chart) => {
             const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+
             const today = new Date();
             const grey = '#A9A9A9';
             const red = '#FF0000';
@@ -1057,57 +1058,54 @@ plugins: [
 
             ctx.save();
 
-            // Normalize today to midnight in GMT+5:00
+            // Normalize today to midnight
             const normalizedToday = new Date(today.setHours(0, 0, 0, 0));
-            normalizedToday.setMinutes(normalizedToday.getMinutes() + 5 * 60);  // Adjust for GMT+5:00
 
-            // Convert dates in chart.data.labels to GMT+5:00 (if they're not already)
-            const normalizedDateRange = chart.data.labels.map(date => {
-                const dateObj = new Date(date);
-                dateObj.setMinutes(dateObj.getMinutes() + 5 * 60);  // Adjust for GMT+5:00
-                return dateObj;
-            });
+            // Assuming `normalizedDateRange` is the array of date objects or ISO strings
+            const normalizedDateRange = chart.data.labels; // Replace this with the actual date range if different
 
-            // Debugging: Log pixel values and verify alignment
+            // Log pixel values for normalized date range to debug (optional)
             normalizedDateRange.forEach((date, i) => {
-                const pixelValue = x.getPixelForValue(date);
-                console.log(`Date: ${date.toISOString()}, Pixel Value: ${pixelValue}`);
+                // Ensure date is a valid Date object
+                const dateObj = new Date(date);
+                if (isNaN(dateObj)) {
+                    console.error(`Invalid date at index ${i}: ${date}`);
+                    return;
+                }
+                const pixelValue = x.getPixelForValue(dateObj);
+                console.log(`Date: ${dateObj}, Pixel Value: ${pixelValue}`);
             });
 
             // Grey background (before today)
             const greyEnd = x.getPixelForValue(normalizedToday);
             console.log("Grey background ends at: ", greyEnd);
-            if (greyEnd && greyEnd > left) {
-                ctx.fillStyle = grey;
-                ctx.fillRect(left, top, greyEnd - left, bottom - top);
-            }
+            ctx.fillStyle = grey;
+            ctx.fillRect(left, top, greyEnd - left, bottom - top);
 
             // Red background (next 7 days)
             const redStart = greyEnd;
-            const redEnd = x.getPixelForValue(new Date(normalizedToday.getTime() + 1 * 24 * 60 * 60 * 1000)); // 7 days duration
+            const redEnd = x.getPixelForValue(new Date(normalizedToday.getTime() + 7 * 24 * 60 * 60 * 1000)); // 7 days duration
             console.log("Red background from: ", redStart, "to: ", redEnd);
-            if (redStart && redEnd && redEnd > redStart) {
-                ctx.fillStyle = red;
-                ctx.fillRect(redStart, top, redEnd - redStart, bottom - top);
-            }
+            ctx.fillStyle = red;
+            ctx.fillRect(redStart, top, redEnd - redStart, bottom - top);
 
             // Pink background (after 7 days)
             const pinkStart = redEnd;
             console.log("Pink background starts at: ", pinkStart);
-            if (pinkStart && pinkStart < right) {
-                ctx.fillStyle = pink;
-                ctx.fillRect(pinkStart, top, right - pinkStart, bottom - top);
-            }
+            ctx.fillStyle = pink;
+            ctx.fillRect(pinkStart, top, right - pinkStart, bottom - top);
 
             ctx.restore();
         },
     },
 ]
+
         });
     } catch (error) {
         console.error("Error fetching AQI data:", error);
     }
 }
+
 
 function sortHoursAndAQI(hours, maxAqiValues) {
 		const combined = hours.map((hour, index) => ({ hour, aqi: maxAqiValues[index] }));
