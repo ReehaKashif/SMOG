@@ -932,7 +932,7 @@ async function fetchAQIPredictionData() {
             type: 'line',
             data: {
                 labels: normalizedDateRange.map(date => {
-                    const options = { month: 'short', day: 'numeric' };
+                    const options = { month: 'short', day: '2-digit' };
                     return date.toLocaleDateString('en-US', options); // Format as MMM-DD
                 }), // X-axis: Date Range
                 datasets: [
@@ -954,7 +954,7 @@ async function fetchAQIPredictionData() {
                         fill: false,
                         pointRadius: 0,
                     },
-					 {
+                    {
                         label: 'Forecast',
                         borderColor: '#8B0000',
                         backgroundColor: '#FFB6B6',
@@ -970,12 +970,11 @@ async function fetchAQIPredictionData() {
                         borderWidth: 2,
                         fill: false,
                         pointRadius: 0,
-						borderDash: [5, 5],
-						 segment: {
-                            borderColor: function(context) {
+                        borderDash: [5, 5],
+                        segment: {
+                            borderColor: function (context) {
                                 const index = context.p0DataIndex;
                                 const label = context.chart.data.labels[index];
-
                                 if (!label) return '#ff0000'; // Default to red if no label is available
 
                                 const currentDate = new Date(`${label}-2024`);
@@ -1016,7 +1015,7 @@ async function fetchAQIPredictionData() {
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            label: function(tooltipItem) {
+                            label: function (tooltipItem) {
                                 const datasetLabel = tooltipItem.dataset.label || '';
                                 const value = tooltipItem.raw;
                                 return `${datasetLabel}: ${value}`;
@@ -1024,82 +1023,27 @@ async function fetchAQIPredictionData() {
                         },
                     },
                 },
-     scales: {
-        x: {
-            type: 'time',
-            time: {
-                unit: 'day',
-                tooltipFormat: 'MMM DD',
+                scales: {
+                    x: {
+                        type: 'category', // Changed from 'time' to 'category' to handle MMM-DD format
+                        labels: normalizedDateRange.map(date => {
+                            const options = { month: 'short', day: '2-digit' };
+                            return date.toLocaleDateString('en-US', options); // Format as MMM-DD
+                        }),
+                        title: {
+                            display: true,
+                            text: 'Date',
+                        },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'AQI',
+                        },
+                        min: 0,
+                    },
+                },
             },
-            title: {
-                display: true,
-                text: 'Date',
-            },
-        },
-        y: {
-            title: {
-                display: true,
-                text: 'AQI',
-            },
-            min: 0,
-        },
-    },
-},
-plugins: [
-    {
-        id: 'customBackground',
-        beforeDraw: (chart) => {
-            const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
-
-            const today = new Date();
-            const grey = '#A9A9A9';
-            const red = '#FF0000';
-            const pink = '#FFB6C1';
-
-            ctx.save();
-
-            // Normalize today to midnight
-            const normalizedToday = new Date(today.setHours(0, 0, 0, 0));
-
-            // Assuming `normalizedDateRange` is the array of date objects or ISO strings
-            const normalizedDateRange = chart.data.labels; // Replace this with the actual date range if different
-
-            // Log pixel values for normalized date range to debug (optional)
-            normalizedDateRange.forEach((date, i) => {
-                // Ensure date is a valid Date object
-                const dateObj = new Date(date);
-                if (isNaN(dateObj)) {
-                    console.error(`Invalid date at index ${i}: ${date}`);
-                    return;
-                }
-                const pixelValue = x.getPixelForValue(dateObj);
-                console.log(`Date: ${dateObj}, Pixel Value: ${pixelValue}`);
-            });
-
-            // Grey background (before today)
-            const greyEnd = x.getPixelForValue(normalizedToday);
-            console.log("Grey background ends at: ", greyEnd);
-            ctx.fillStyle = grey;
-            ctx.fillRect(left, top, greyEnd - left, bottom - top);
-
-            // Red background (next 7 days)
-            const redStart = greyEnd;
-            const redEnd = x.getPixelForValue(new Date(normalizedToday.getTime() + 7 * 24 * 60 * 60 * 1000)); // 7 days duration
-            console.log("Red background from: ", redStart, "to: ", redEnd);
-            ctx.fillStyle = red;
-            ctx.fillRect(redStart, top, redEnd - redStart, bottom - top);
-
-            // Pink background (after 7 days)
-            const pinkStart = redEnd;
-            console.log("Pink background starts at: ", pinkStart);
-            ctx.fillStyle = pink;
-            ctx.fillRect(pinkStart, top, right - pinkStart, bottom - top);
-
-            ctx.restore();
-        },
-    },
-]
-
         });
     } catch (error) {
         console.error("Error fetching AQI data:", error);
